@@ -34,10 +34,13 @@ def resolve_hostname(ip):
 
 def fast_ping(ip):
     try:
-        # Very short timeout for discovery
-        res = subprocess.run(["ping", "-n", "1", "-w", "200", ip],
-                             capture_output=True, text=True, shell=False,
-                             creationflags=CREATE_NO_WINDOW)
+        if os.name == 'nt':
+            args = ["ping", "-n", "1", "-w", "200", ip]
+            kwargs = {"creationflags": CREATE_NO_WINDOW}
+        else:
+            args = ["ping", "-c", "1", "-W", "1", ip]
+            kwargs = {}
+        res = subprocess.run(args, capture_output=True, text=True, shell=False, **kwargs)
         return res.returncode == 0
     except:
         return False
@@ -57,7 +60,13 @@ def check_web_ports(ip):
 
 def get_manufacturer_from_arp(ip):
     try:
-        res = subprocess.run(["arp", "-a", ip], capture_output=True, text=True, shell=True)
+        if os.name == 'nt':
+            args = ["arp", "-a", ip]
+            kwargs = {"shell": True}
+        else:
+            args = ["arp", "-n", ip]
+            kwargs = {"shell": False}
+        res = subprocess.run(args, capture_output=True, text=True, **kwargs)
         mac_match = re.search(r"([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})", res.stdout)
         if mac_match:
             mac = mac_match.group(0).replace("-", ":").upper()
@@ -93,19 +102,37 @@ def get_manufacturer_from_arp(ip):
 
 def ping_ip(ip):
     try:
-        res = subprocess.run(["ping", "-n", "1", "-w", "800", ip],
-                             capture_output=True, text=True, shell=False,
-                             creationflags=CREATE_NO_WINDOW)
+        if os.name == 'nt':
+            args = ["ping", "-n", "1", "-w", "800", ip]
+            kwargs = {"creationflags": CREATE_NO_WINDOW}
+        else:
+            args = ["ping", "-c", "1", "-W", "1", ip]
+            kwargs = {}
+        res = subprocess.run(args, capture_output=True, text=True, shell=False, **kwargs)
         if res.returncode == 0:
-            match = re.search(r"(\d+)ms", res.stdout)
+            if os.name == 'nt':
+                match = re.search(r"(\d+)ms", res.stdout)
+            else:
+                match = re.search(r"time=(\d+\.?\d*)", res.stdout)
             return True, match.group(1) if match else "1"
         return False, "Hata"
     except:
         return False, "Hata"
 
 def start_ssh(ip):
-    cmd = f'start cmd /k "ssh baykar@{ip}"'
-    os.system(cmd)
+    if os.name == 'nt':
+        cmd = f'start cmd /k "ssh baykar@{ip}"'
+        os.system(cmd)
+        return True, "SSH başlatılıyor..."
+    else:
+        # Check if terminal emulator or similar is available or just try standard ssh
+        # Since we can't easily spawn a new terminal window generically on all Linux distros
+        # without assuming specific tools, we'll inform the user.
+        return False, "SSH bu platformda otomatik olarak başlatılamıyor. Lütfen terminalden bağlamayı deneyin."
 
 def start_rdp(ip):
-    os.system(f'start mstsc /v:{ip}')
+    if os.name == 'nt':
+        os.system(f'start mstsc /v:{ip}')
+        return True, "RDP başlatılıyor..."
+    else:
+        return False, "RDP bu platformda desteklenmiyor (Mstsc bulunamadı)."

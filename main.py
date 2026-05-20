@@ -283,8 +283,8 @@ class UltraNetworkMonitorV5:
         menu.add_command(label="🚀 TraceRoute Başlat", command=lambda: self.start_traceroute(ip))
         menu.add_command(label="📋 IP Kopyala", command=lambda: self.copy_to_clipboard(ip))
         menu.add_separator()
-        menu.add_command(label="🔒 SSH Bağlantısı", command=lambda: network_utils.start_ssh(ip))
-        menu.add_command(label="💻 RDP (Uzak Masaüstü)", command=lambda: network_utils.start_rdp(ip))
+        menu.add_command(label="🔒 SSH Bağlantısı", command=lambda: self.run_remote_command(network_utils.start_ssh, ip))
+        menu.add_command(label="💻 RDP (Uzak Masaüstü)", command=lambda: self.run_remote_command(network_utils.start_rdp, ip))
         menu.tk_popup(event.x_root, event.y_root)
 
     def manage_tag(self, row_data, action):
@@ -595,8 +595,21 @@ class UltraNetworkMonitorV5:
         scroll.pack(side="right", fill="y")
         def run_trace():
             import subprocess
-            proc = subprocess.Popen(["tracert", "-d", ip], stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, text=True, creationflags=0x08000000)
+            import shutil
+            if os.name == 'nt':
+                cmd = ["tracert", "-d", ip]
+                kwargs = {"creationflags": 0x08000000}
+            else:
+                if shutil.which("traceroute"):
+                    cmd = ["traceroute", "-n", ip]
+                else:
+                    txt.insert(tk.END, "Error: 'traceroute' command not found.\n")
+                    txt.insert(tk.END, "Please install it using: sudo apt install traceroute\n")
+                    return
+                kwargs = {}
+
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True, **kwargs)
             try:
                 for line in proc.stdout:
                     if not tw.winfo_exists(): break
@@ -604,6 +617,11 @@ class UltraNetworkMonitorV5:
                 if tw.winfo_exists(): txt.insert(tk.END, "\n--- Tamamlandı ---")
             except: pass
         threading.Thread(target=run_trace, daemon=True).start()
+
+    def run_remote_command(self, func, ip):
+        success, message = func(ip)
+        if not success:
+            messagebox.showwarning("Uyarı", message)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
