@@ -30,7 +30,7 @@ async function initializeData() {
 async function loadPackages() {
     const packages = await pywebview.api.get_packages();
     const select = document.getElementById('packageSelect');
-    select.innerHTML = '<option value="">No Package</option>';
+    select.innerHTML = '<option value="">Paket Seçilmedi</option>';
     Object.keys(packages).forEach(pkg => {
         const opt = document.createElement('option');
         opt.value = pkg;
@@ -47,7 +47,8 @@ async function loadDevices() {
 
 function showView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-    document.getElementById(viewId + 'View').style.display = 'block';
+    const targetView = document.getElementById(viewId + 'View');
+    if (targetView) targetView.style.display = 'block';
 
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
@@ -151,7 +152,7 @@ async function confirmBulkAdd() {
 }
 
 async function resetDashboard() {
-    if (confirm('Clear all devices?')) {
+    if (confirm('Tüm cihazları temizlemek istediğinize emin misiniz?')) {
         await pywebview.api.reset_devices();
         await loadDevices();
     }
@@ -159,7 +160,7 @@ async function resetDashboard() {
 
 // Package Management
 async function savePackage() {
-    const name = prompt('Package Name:');
+    const name = prompt('Paket Adı:');
     if (name) {
         await pywebview.api.save_package(name);
         await loadPackages();
@@ -176,7 +177,7 @@ async function loadPackage() {
 
 async function deletePackage() {
     const name = document.getElementById('packageSelect').value;
-    if (name && confirm(`Delete package "${name}"?`)) {
+    if (name && confirm(`"${name}" paketini silmek istediğinize emin misiniz?`)) {
         await pywebview.api.delete_package(name);
         await loadPackages();
     }
@@ -202,7 +203,7 @@ async function handleMenuAction(action) {
 
     switch(action) {
         case 'tag':
-            const newTag = prompt('Enter description:');
+            const newTag = prompt('Yeni etiket/açıklama girin:');
             if (newTag !== null) await pywebview.api.manage_tag(selectedIp, newTag);
             break;
         case 'hostname':
