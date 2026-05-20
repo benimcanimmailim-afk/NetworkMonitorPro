@@ -31,14 +31,23 @@ class Api:
         return self.config_mgr.load_all_packages()
 
     def bulk_add(self, text):
-        ip_list = [ip for ip in re.split(r'[,\s\n]+', text.strip()) if ip]
+        # Daha esnek IP ayıklama (sadece geçerli IP formatlarını bulur)
+        ip_list = re.findall(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', text)
+        added_count = 0
         for ip in ip_list:
-            self._add_device(ip)
-        return True
+            if self._add_device(ip):
+                added_count += 1
+        return added_count
 
     def _add_device(self, ip, tag=""):
+        # IP geçerlilik kontrolü
+        try:
+            ipaddress.IPv4Address(ip)
+        except:
+            return False
+
         if any(d["ip"] == ip for d in self.devices):
-            return
+            return False
 
         device = {
             "ip": ip,
@@ -53,6 +62,7 @@ class Api:
         thread = threading.Thread(target=self._ping_loop, args=(device,), daemon=True)
         thread.start()
         self.ping_threads[ip] = thread
+        return True
 
     def _ping_loop(self, device):
         while device["active"]:

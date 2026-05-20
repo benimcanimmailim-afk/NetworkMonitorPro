@@ -143,11 +143,22 @@ function closeModal(id) {
 }
 
 async function confirmBulkAdd() {
-    const text = document.getElementById('bulkIps').value;
+    const textarea = document.getElementById('bulkIps');
+    const text = textarea.value;
     if (text) {
-        await pywebview.api.bulk_add(text);
-        closeModal('addModal');
-        await loadDevices();
+        try {
+            const count = await pywebview.api.bulk_add(text);
+            if (count > 0) {
+                textarea.value = ''; // Clear textarea after success
+                closeModal('addModal');
+                await loadDevices();
+            } else {
+                alert("Geçerli bir IP adresi bulunamadı veya cihazlar zaten listede.");
+            }
+        } catch (e) {
+            console.error("Bulk add failed:", e);
+            alert("Ekleme sırasında bir hata oluştu.");
+        }
     }
 }
 
