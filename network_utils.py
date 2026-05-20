@@ -120,19 +120,29 @@ def ping_ip(ip):
         return False, "Hata"
 
 def start_ssh(ip):
+    # Basic IP validation to prevent command injection
+    if not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+        return False, "Geçersiz IP adresi."
+
     if os.name == 'nt':
-        cmd = f'start cmd /k "ssh baykar@{ip}"'
-        os.system(cmd)
-        return True, "SSH başlatılıyor..."
+        try:
+            # Safe execution using subprocess with arguments
+            subprocess.Popen(["cmd", "/c", "start", "cmd", "/k", f"ssh baykar@{ip}"], shell=False)
+            return True, "SSH başlatılıyor..."
+        except Exception as e:
+            return False, f"SSH başlatılamadı: {str(e)}"
     else:
-        # Check if terminal emulator or similar is available or just try standard ssh
-        # Since we can't easily spawn a new terminal window generically on all Linux distros
-        # without assuming specific tools, we'll inform the user.
         return False, "SSH bu platformda otomatik olarak başlatılamıyor. Lütfen terminalden bağlamayı deneyin."
 
 def start_rdp(ip):
+    if not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+        return False, "Geçersiz IP adresi."
+
     if os.name == 'nt':
-        os.system(f'start mstsc /v:{ip}')
-        return True, "RDP başlatılıyor..."
+        try:
+            subprocess.Popen(["cmd", "/c", "start", "mstsc", f"/v:{ip}"], shell=False)
+            return True, "RDP başlatılıyor..."
+        except Exception as e:
+            return False, f"RDP başlatılamadı: {str(e)}"
     else:
         return False, "RDP bu platformda desteklenmiyor (Mstsc bulunamadı)."
